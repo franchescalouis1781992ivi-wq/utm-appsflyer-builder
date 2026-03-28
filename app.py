@@ -79,7 +79,6 @@ CAMPAIGN_PREFIX_OPTIONS = [
     "pmanual",
     "pautomation",
 ]
-CUSTOM_OPTION_LABEL = "自定义输入..."
 
 
 def inject_apple_panel_styles() -> None:
@@ -276,25 +275,21 @@ def render_select_with_custom_input(
     placeholder: str = "输入自定义值",
 ) -> str:
     current_text = coerce_text(current_value)
-    select_options = options + [CUSTOM_OPTION_LABEL]
-    default_option = current_text if current_text in options else CUSTOM_OPTION_LABEL
-
+    default_option = current_text if current_text in options else (options[0] if options else "")
     selected = container.selectbox(
         label,
-        select_options,
-        index=select_options.index(default_option),
+        options,
+        index=options.index(default_option) if default_option in options else 0,
         key=f"{key_prefix}_mode_widget_{form_revision}",
     )
-    if selected == CUSTOM_OPTION_LABEL:
-        custom_value = container.text_input(
-            f"{label}（自定义）",
-            value="" if current_text in options else current_text,
-            key=f"{key_prefix}_custom_widget_{form_revision}",
-            placeholder=placeholder,
-        )
-        return coerce_text(custom_value)
-
-    return selected
+    custom_value = container.text_input(
+        f"{label}（自定义，可留空）",
+        value="" if current_text in options else current_text,
+        key=f"{key_prefix}_custom_widget_{form_revision}",
+        placeholder=placeholder,
+    )
+    custom_text = coerce_text(custom_value)
+    return custom_text if custom_text else selected
 
 
 def render_section_shell(title: str, subtitle: str) -> None:
