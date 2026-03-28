@@ -79,6 +79,7 @@ CAMPAIGN_PREFIX_OPTIONS = [
     "pmanual",
     "pautomation",
 ]
+CUSTOM_OPTION_LABEL = "自定义输入..."
 
 
 def inject_apple_panel_styles() -> None:
@@ -263,6 +264,37 @@ def render_apple_hero(title: str, subtitle: str, kicker: str = "Link Builder") -
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_select_with_custom_input(
+    container,
+    label: str,
+    options: list[str],
+    current_value: str,
+    key_prefix: str,
+    form_revision: int,
+    placeholder: str = "输入自定义值",
+) -> str:
+    current_text = coerce_text(current_value)
+    select_options = options + [CUSTOM_OPTION_LABEL]
+    default_option = current_text if current_text in options else CUSTOM_OPTION_LABEL
+
+    selected = container.selectbox(
+        label,
+        select_options,
+        index=select_options.index(default_option),
+        key=f"{key_prefix}_mode_widget_{form_revision}",
+    )
+    if selected == CUSTOM_OPTION_LABEL:
+        custom_value = container.text_input(
+            f"{label}（自定义）",
+            value="" if current_text in options else current_text,
+            key=f"{key_prefix}_custom_widget_{form_revision}",
+            placeholder=placeholder,
+        )
+        return coerce_text(custom_value)
+
+    return selected
 
 
 def render_section_shell(title: str, subtitle: str) -> None:
@@ -1168,40 +1200,52 @@ try:
 
         render_step_shell("1", "Campaign 参数区", "先定义这次活动的命名规则和追踪参数。", tone="#111827")
         with st.expander("查看参数规则说明", expanded=False):
-            st.caption("medium：email / app-push / sms")
-            st.caption("utm_source：manual / automation")
-            st.caption("campaign prefix：渠道首字母 + 发送方式，例如 emanual / eautomation / smanual / sautomation / pmanual / pautomation")
-            st.caption("type：Matching / Sale / Bamboo / Disney / Ip / Kids / Holiday / Cruise / Test")
+            st.caption("medium：默认建议 email / app-push / sms，也可手动输入新值")
+            st.caption("utm_source：默认建议 manual / automation，也可手动输入新值")
+            st.caption("campaign prefix：默认建议渠道首字母 + 发送方式（emanual / eautomation / smanual / sautomation / pmanual / pautomation），也可手动输入")
+            st.caption("type：默认建议 Matching / Sale / Bamboo / Disney / Ip / Kids / Holiday / Cruise / Test，也可手动输入新类型")
             st.caption("theme / sender：自定义填写")
             st.caption("utm_term：本次活动的 term 基础值，例如 0320paw")
         c1, c2, c3 = st.columns(3)
         archive_name = c1.text_input("活动名称", value=st.session_state.get("draft_archive_name", ""), key=f"lb_archive_name_widget_{form_revision}")
         pid = c2.text_input("pid", value=st.session_state.get("draft_pid", ""), key=f"lb_pid_widget_{form_revision}")
-        medium = c3.selectbox(
+        medium = render_select_with_custom_input(
+            c3,
             "medium",
             MEDIUM_OPTIONS,
-            index=MEDIUM_OPTIONS.index(st.session_state.get("draft_medium", MEDIUM_OPTIONS[0])) if st.session_state.get("draft_medium", MEDIUM_OPTIONS[0]) in MEDIUM_OPTIONS else 0,
-            key=f"lb_medium_widget_{form_revision}",
+            st.session_state.get("draft_medium", MEDIUM_OPTIONS[0]),
+            "lb_medium",
+            form_revision,
+            placeholder="例如：in-app-message",
         )
 
         c4, c5, c6 = st.columns(3)
-        utm_source = c4.selectbox(
+        utm_source = render_select_with_custom_input(
+            c4,
             "utm_source",
             UTM_SOURCE_OPTIONS,
-            index=UTM_SOURCE_OPTIONS.index(st.session_state.get("draft_utm_source", UTM_SOURCE_OPTIONS[0])) if st.session_state.get("draft_utm_source", UTM_SOURCE_OPTIONS[0]) in UTM_SOURCE_OPTIONS else 0,
-            key=f"lb_utm_source_widget_{form_revision}",
+            st.session_state.get("draft_utm_source", UTM_SOURCE_OPTIONS[0]),
+            "lb_utm_source",
+            form_revision,
+            placeholder="例如：crm-journey",
         )
-        campaign_prefix = c5.selectbox(
+        campaign_prefix = render_select_with_custom_input(
+            c5,
             "campaign prefix",
             CAMPAIGN_PREFIX_OPTIONS,
-            index=CAMPAIGN_PREFIX_OPTIONS.index(st.session_state.get("draft_campaign_prefix", CAMPAIGN_PREFIX_OPTIONS[0])) if st.session_state.get("draft_campaign_prefix", CAMPAIGN_PREFIX_OPTIONS[0]) in CAMPAIGN_PREFIX_OPTIONS else 0,
-            key=f"lb_campaign_prefix_widget_{form_revision}",
+            st.session_state.get("draft_campaign_prefix", CAMPAIGN_PREFIX_OPTIONS[0]),
+            "lb_campaign_prefix",
+            form_revision,
+            placeholder="例如：xmanual",
         )
-        campaign_type = c6.selectbox(
+        campaign_type = render_select_with_custom_input(
+            c6,
             "type",
             TYPE_OPTIONS,
-            index=TYPE_OPTIONS.index(st.session_state.get("draft_type", TYPE_OPTIONS[0])) if st.session_state.get("draft_type", TYPE_OPTIONS[0]) in TYPE_OPTIONS else 0,
-            key=f"lb_type_widget_{form_revision}",
+            st.session_state.get("draft_type", TYPE_OPTIONS[0]),
+            "lb_type",
+            form_revision,
+            placeholder="例如：Shipping",
         )
 
         c7, c8, c9 = st.columns(3)
