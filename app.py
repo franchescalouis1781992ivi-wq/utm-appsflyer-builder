@@ -275,21 +275,42 @@ def render_select_with_custom_input(
     placeholder: str = "输入自定义值",
 ) -> str:
     current_text = coerce_text(current_value)
-    default_option = current_text if current_text in options else (options[0] if options else "")
-    selected = container.selectbox(
-        label,
-        options,
-        index=options.index(default_option) if default_option in options else 0,
-        key=f"{key_prefix}_mode_widget_{form_revision}",
-    )
-    custom_value = container.text_input(
-        f"{label}（自定义，可留空）",
-        value="" if current_text in options else current_text,
-        key=f"{key_prefix}_custom_widget_{form_revision}",
-        placeholder=placeholder,
-    )
-    custom_text = coerce_text(custom_value)
-    return custom_text if custom_text else selected
+    if not options:
+        return current_text
+
+    default_option = current_text if current_text in options else options[0]
+    select_key = f"{key_prefix}_mode_widget_{form_revision}"
+
+    # Streamlit >= 1.47 supports a single editable selectbox.
+    try:
+        selected = container.selectbox(
+            label,
+            options,
+            index=options.index(default_option),
+            key=select_key,
+            accept_new_options=True,
+            placeholder=placeholder,
+        )
+        return coerce_text(selected)
+    except TypeError:
+        if current_text and current_text not in options:
+            merged_options = [current_text] + options
+            return coerce_text(
+                container.selectbox(
+                    label,
+                    merged_options,
+                    index=0,
+                    key=select_key,
+                )
+            )
+        return coerce_text(
+            container.selectbox(
+                label,
+                options,
+                index=options.index(default_option),
+                key=select_key,
+            )
+        )
 
 
 def render_section_shell(title: str, subtitle: str) -> None:
@@ -1195,10 +1216,10 @@ try:
 
         render_step_shell("1", "Campaign 参数区", "先定义这次活动的命名规则和追踪参数。", tone="#111827")
         with st.expander("查看参数规则说明", expanded=False):
-            st.caption("medium：默认建议 email / app-push / sms，也可手动输入新值")
-            st.caption("utm_source：默认建议 manual / automation，也可手动输入新值")
-            st.caption("campaign prefix：默认建议渠道首字母 + 发送方式（emanual / eautomation / smanual / sautomation / pmanual / pautomation），也可手动输入")
-            st.caption("type：默认建议 Matching / Sale / Bamboo / Disney / Ip / Kids / Holiday / Cruise / Test，也可手动输入新类型")
+            st.caption("medium：同一输入框可选建议值（email / app-push / sms）或直接输入新值")
+            st.caption("utm_source：同一输入框可选建议值（manual / automation）或直接输入新值")
+            st.caption("campaign prefix：同一输入框可选建议值（emanual / eautomation / smanual / sautomation / pmanual / pautomation）或直接输入新值")
+            st.caption("type：同一输入框可选建议值（Matching / Sale / Bamboo / Disney / Ip / Kids / Holiday / Cruise / Test）或直接输入新类型")
             st.caption("theme / sender：自定义填写")
             st.caption("utm_term：本次活动的 term 基础值，例如 0320paw")
         c1, c2, c3 = st.columns(3)
